@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Evaluasi Akhlak Tasawuf - MBS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <style>
+    body {
+      background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+      color: #f8fafc;
+      font-family: system-ui, -apple-system, sans-serif;
+      user-select: none;
+    }
+    .galaxy-card {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.1);
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-12 flex flex-col items-center" oncontextmenu="return false;">
+
+  <!-- Audio Sirine -->
+  <audio id="siren" loop src="https://actions.google.com/sounds/v1/emergency/beeping_emergency_alarm.ogg"></audio>
+
+  <!-- Header -->
+  <header class="w-full max-w-4xl mt-6 px-4 text-center">
+    <div class="galaxy-card p-6 rounded-2xl mb-6">
+      <h1 class="text-2xl md:text-3xl font-extrabold text-cyan-400 tracking-wide">EVALUASI AKHLAK TASAWUF</h1>
+      <p class="text-slate-300 text-sm md:text-base mt-1">Program Studi Manajemen Bisnis Syariah - Semester 1</p>
+      <div class="mt-3 text-xs md:text-sm text-slate-400 border-t border-slate-700/60 pt-3">
+        Dosen Pengampu: <span class="font-semibold text-cyan-300">Sri Anugrah Indriani, S.Pd., M.Pd.</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="w-full max-w-4xl px-4">
+
+    <!-- Modal Lock -->
+    <div id="lockModal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+      <div class="galaxy-card p-8 rounded-2xl max-w-md w-full text-center">
+        <h2 class="text-xl font-bold text-amber-400 mb-2">Akses Terkunci</h2>
+        <p class="text-xs text-slate-300 mb-6">Ujian ini hanya dapat dikerjakan 1 kali pada perangkat ini. Masukkan kode verifikasi untuk mengakses kembali.</p>
+        <input type="password" id="unlockCode" placeholder="Masukkan Kode Verifikasi..." class="w-full px-4 py-3 rounded-lg bg-slate-900 border border-slate-700 text-white mb-4 text-center focus:outline-none focus:border-cyan-400">
+        <button onclick="verifyUnlockCode()" class="w-full py-3 bg-cyan-600 hover:bg-cyan-500 font-semibold rounded-lg transition">Buka Akses</button>
+        <p id="lockError" class="text-rose-400 text-xs mt-3 hidden">Kode tidak valid!</p>
+      </div>
+    </div>
+
+    <!-- Alert Pelanggaran -->
+    <div id="cheatAlert" class="hidden fixed top-4 right-4 left-4 md:left-auto bg-rose-600 text-white p-4 rounded-xl shadow-2xl z-50 flex items-center justify-between border border-rose-400">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">⚠️</span>
+        <div>
+          <h4 class="font-bold text-sm">DETEKSI PELANGGARAN!</h4>
+          <p class="text-xs">Dilarang keluar dari layar ujian atau berpindah aplikasi!</p>
+        </div>
+      </div>
+      <button onclick="stopSiren()" class="px-3 py-1 bg-white text-rose-600 font-bold text-xs rounded hover:bg-slate-100">Matikan Sirine</button>
+    </div>
+
+    <!-- Registrasi Form -->
+    <section id="identitySection" class="galaxy-card p-6 md:p-8 rounded-2xl mb-8">
+      <h2 class="text-lg font-bold text-cyan-300 mb-4 flex items-center gap-2">
+        <span>📝</span> Registrasi Peserta Ujian
+      </h2>
+      <form id="studentForm" class="space-y-4" onsubmit="startExam(event)">
+        <div>
+          <label class="block text-xs text-slate-300 mb-1">Nama Lengkap</label>
+          <input type="text" id="studentName" required placeholder="Contoh: Ahmad Maulana" class="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-cyan-400">
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-slate-300 mb-1">NIM</label>
+            <input type="text" id="studentNIM" required placeholder="Contoh: 230101001" class="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-cyan-400">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-300 mb-1">Program Studi</label>
+            <input type="text" id="studentProdi" value="Manajemen Bisnis Syariah" required class="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-cyan-400">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-300 mb-1">Unggah Foto Diri / Pasfoto</label>
+          <input type="file" id="studentPhoto" accept="image/*" required class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-cyan-900 file:text-cyan-300 hover:file:bg-cyan-800">
+        </div>
+        <button type="submit" id="startBtn" class="w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 font-bold rounded-lg transition text-sm mt-4 shadow-lg shadow-cyan-900/50">
+          Mulai Pengerjaan Ujian (80 Menit)
+        </button>
+      </form>
+    </section>
+
+    <!-- Soal Ujian -->
+    <section id="examSection" class="hidden space-y-6">
+      <div class="sticky top-4 z-40 galaxy-card p-4 rounded-xl flex items-center justify-between border-cyan-500/40">
+        <div class="text-xs">
+          <p class="text-slate-400">Peserta:</p>
+          <p id="displayName" class="font-bold text-cyan-300"></p>
+        </div>
+        <div class="text-right">
+          <p class="text-xs text-slate-400">Sisa Waktu:</p>
+          <p id="timer" class="font-mono text-lg font-bold text-amber-400">01:20:00</p>
+        </div>
+      </div>
+
+      <form id="examForm" onsubmit="submitExam(event)" class="space-y-6">
+        <div id="questionsContainer" class="space-y-6"></div>
+        <button type="submit" id="submitBtn" class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl transition text-base shadow-lg shadow-emerald-900/40">
+          Kirim Jawaban & Selesaikan Ujian
+        </button>
+      </form>
+    </section>
+
+    <!-- Feedback -->
+    <section id="feedbackSection" class="hidden galaxy-card p-8 rounded-2xl text-center">
+      <div class="text-5xl mb-4">✨</div>
+      <h2 class="text-2xl font-bold text-cyan-300 mb-2">Jawaban Anda Berhasil Terkirim!</h2>
+      <p class="text-sm text-slate-300 mb-6">Terima kasih telah menyelesaikan evaluasi ini secara jujur.</p>
+
+      <form id="feedbackForm" onsubmit="submitFeedback(event)" class="max-w-lg mx-auto text-left space-y-4 border-t border-slate-700/60 pt-6">
+        <h3 class="font-semibold text-sm text-slate-200">Berikan Ulasan Evaluasi Hari Ini:</h3>
+        <textarea id="feedbackText" required rows="3" placeholder="Tuliskan ulasan Anda..." class="w-full p-3 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-cyan-400"></textarea>
+        <button type="submit" class="w-full py-2.5 bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold rounded-lg transition">Kirim Ulasan</button>
+      </form>
+    </section>
+
+    <!-- Portal Dosen -->
+    <div class="mt-12 text-center">
+      <button onclick="openDosenModal()" class="text-xs text-slate-500 hover:text-cyan-400 transition underline">
+        🔒 Portal Pemantauan Dosen
+      </button>
+    </div>
+
+    <div id="dosenModal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+      <div class="galaxy-card p-6 md:p-8 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-lg font-bold text-cyan-300">Dashboard Pemantauan Dosen</h2>
+          <button onclick="closeDosenModal()" class="text-slate-400 hover:text-white">✕</button>
+        </div>
+
+        <div id="dosenAuth" class="space-y-4 max-w-md mx-auto text-center py-6">
+          <p class="text-xs text-slate-300">Masukkan kata sandi khusus dosen:</p>
+          <input type="password" id="dosenPass" placeholder="Kata Sandi Dosen" class="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-cyan-400 text-center">
+          <button onclick="authDosen()" class="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 font-bold rounded-lg text-sm transition">Masuk Dashboard</button>
+          <p id="dosenAuthError" class="text-rose-400 text-xs hidden">Kata sandi salah!</p>
+        </div>
+
+        <div id="dosenDashboard" class="hidden space-y-6">
+          <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-700 pb-4">
+            <h3 class="text-sm font-semibold text-slate-200">Daftar Mahasiswa & Log Pelanggaran Real-time</h3>
+            <button onclick="fetchDosenData()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs rounded border border-slate-600">🔄 Refresh Data</button>
+          </div>
+          <div id="dosenDataContainer" class="space-y-4">
+            <p class="text-xs text-slate-400 text-center">Memuat data...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // Config Firebase
+    const firebaseConfig = {
+      databaseURL: "https://evaluasi-akhlak-tasawuf-default-rtdb.asia-southeast1.firebasedatabase.app/"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const questions = [
+      "Jelaskan definisi AKHLAK, TASAWUF dan AKHLAK TASAWUF",
+      "Jelaskan 3 proses tazkiyatun nafs",
+      "Jelaskan secara singkat akhlak tasawuf pada masa Rasulullah Saw",
+      "Jelaskan bagaimana peranan para sahabat dalam memperkenalkan Akhlak Tasawuf",
+      "Jelaskan fase sejarah pertumbuhan Akhlak Tasawuf",
+      "Jelaskan fase perkembangan Akhlak Tasawuf",
+      "Apa itu Maqamat Wa Al Ahwal? Jelaskan",
+      "Apa itu Ma'rifatullah? Jelaskan",
+      "Jelaskan relevansi akhlak tasawuf di era modern bagi Gen Z",
+      "Jelaskan salah satu hubungan Akhlak Tasawuf dengan ilmu keislaman"
+    ];
+
+    let currentStudentKey = null;
+    let timerInterval = null;
+    let timeRemaining = 80 * 60;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderQuestions();
+      checkLockStatus();
+      preventCopyPaste();
+      initCheatProtection();
+    });
+
+    function checkLockStatus() {
+      if (localStorage.getItem('exam_completed')) {
+        document.getElementById('lockModal').classList.remove('hidden');
+      }
+    }
+
+    function verifyUnlockCode() {
+      const code = document.getElementById('unlockCode').value.trim();
+      if (code === 'ULANG LAGI') {
+        localStorage.removeItem('exam_completed');
+        document.getElementById('lockModal').classList.add('hidden');
+      } else if (code === 'UDAH SIAP BELOM') {
+        document.getElementById('lockModal').classList.add('hidden');
+        openDosenModal();
+      } else {
+        document.getElementById('lockError').classList.remove('hidden');
+      }
+    }
+
+    function renderQuestions() {
+      const container = document.getElementById('questionsContainer');
+      container.innerHTML = questions.map((q, idx) => `
+        <div class="galaxy-card p-5 rounded-xl space-y-3">
+          <label class="block text-sm font-semibold text-slate-200">${idx + 1}. ${q}</label>
+          <textarea id="q_${idx}" required rows="3" placeholder="Tuliskan jawaban singkat Anda..." class="w-full p-3 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-cyan-400"></textarea>
+        </div>
+      `).join('');
+    }
+
+    // Fungsi Kompresi Foto agar Tidak Crash di HP
+    function compressPhoto(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const max_size = 400; // Resize maks 400px
+            let width = img.width;
+            let height = img.height;
+            if (width > height) {
+              if (width > max_size) { height *= max_size / width; width = max_size; }
+            } else {
+              if (height > max_size) { width *= max_size / height; height = max_size; }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.7));
+          };
+        };
+      });
+    }
+
+    async function startExam(e) {
+      e.preventDefault();
+      const btn = document.getElementById('startBtn');
+      btn.innerText = 'Memproses...';
+      btn.disabled = true;
+
+      try {
+        const name = document.getElementById('studentName').value.trim();
+        const nim = document.getElementById('studentNIM').value.trim();
+        const prodi = document.getElementById('studentProdi').value.trim();
+        const photoFile = document.getElementById('studentPhoto').files[0];
+
+        const photoBase64 = photoFile ? await compressPhoto(photoFile) : '';
+        currentStudentKey = nim.replace(/[.#$/[\]]/g, "_");
+
+        const studentData = {
+          name, nim, prodi, photo: photoBase64,
+          startTime: new Date().toLocaleTimeString(),
+          violations: [],
+          violationCount: 0,
+          status: 'Sedang Mengerjakan'
+        };
+
+        await db.ref('students/' + currentStudentKey).set(studentData);
+
+        document.getElementById('identitySection').classList.add('hidden');
+        document.getElementById('examSection').classList.remove('hidden');
+        document.getElementById('displayName').innerText = name;
+
+        startTimer();
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } catch (err) {
+        alert('Terjadi kesalahan, coba muat ulang halaman.');
+        btn.innerText = 'Mulai Pengerjaan Ujian (80 Menit)';
+        btn.disabled = false;
+      }
+    }
+
+    function startTimer() {
+      timerInterval = setInterval(() => {
+        timeRemaining--;
+        const hours = String(Math.floor(timeRemaining / 3600)).padStart(2, '0');
+        const mins = String(Math.floor((timeRemaining % 3600) / 60)).padStart(2, '0');
+        const secs = String(timeRemaining % 60).padStart(2, '0');
+        document.getElementById('timer').innerText = `${hours}:${mins}:${secs}`;
+
+        if (timeRemaining <= 0) {
+          clearInterval(timerInterval);
+          alert('Waktu habis!');
+          document.getElementById('examForm').requestSubmit();
+        }
+      }, 1000);
+    }
+
+    function initCheatProtection() {
+      window.addEventListener('blur', () => {
+        if (currentStudentKey) recordViolation('Pindah Tab / Keluar Aplikasi');
+      });
+
+      document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement && currentStudentKey) {
+          recordViolation('Keluar Modus Fullscreen');
+        }
+      });
+    }
+
+    function recordViolation(reason) {
+      const siren = document.getElementById('siren');
+      siren.play().catch(() => {});
+      document.getElementById('cheatAlert').classList.remove('hidden');
+
+      const time = new Date().toLocaleTimeString();
+      db.ref('students/' + currentStudentKey).transaction((student) => {
+        if (student) {
+          if (!student.violations) student.violations = [];
+          student.violations.push(`${time} - ${reason}`);
+          student.violationCount = student.violations.length;
+        }
+        return student;
+      });
+    }
+
+    function stopSiren() {
+      const siren = document.getElementById('siren');
+      siren.pause();
+      siren.currentTime = 0;
+      document.getElementById('cheatAlert').classList.add('hidden');
+    }
+
+    function preventCopyPaste() {
+      document.addEventListener('copy', (e) => e.preventDefault());
+      document.addEventListener('paste', (e) => e.preventDefault());
+    }
+
+    async function submitExam(e) {
+      e.preventDefault();
+      clearInterval(timerInterval);
+
+      const answers = questions.map((q, idx) => ({
+        soal: q,
+        jawaban: document.getElementById(`q_${idx}`).value.trim()
+      }));
+
+      await db.ref('students/' + currentStudentKey).update({
+        answers,
+        status: 'Selesai',
+        submitTime: new Date().toLocaleTimeString()
+      });
+
+      localStorage.setItem('exam_completed', 'true');
+      document.getElementById('examSection').classList.add('hidden');
+      document.getElementById('feedbackSection').classList.remove('hidden');
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    }
+
+    async function submitFeedback(e) {
+      e.preventDefault();
+      const feedbackText = document.getElementById('feedbackText').value.trim();
+      await db.ref('students/' + currentStudentKey).update({ feedback: feedbackText });
+      alert('Ulasan terkirim. Terima kasih!');
+      document.getElementById('feedbackForm').reset();
+    }
+
+    function openDosenModal() {
+      document.getElementById('dosenModal').classList.remove('hidden');
+    }
+
+    function closeDosenModal() {
+      document.getElementById('dosenModal').classList.add('hidden');
+    }
+
+    function authDosen() {
+      const pass = document.getElementById('dosenPass').value.trim();
+      if (pass === 'UDAH SIAP BELOM') {
+        document.getElementById('dosenAuth').classList.add('hidden');
+        document.getElementById('dosenDashboard').classList.remove('hidden');
+        document.getElementById('dosenAuthError').classList.add('hidden');
+        fetchDosenData();
+      } else {
+        document.getElementById('dosenAuthError').classList.remove('hidden');
+      }
+    }
+
+    function fetchDosenData() {
+      const container = document.getElementById('dosenDataContainer');
+      db.ref('students').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (!data) {
+          container.innerHTML = `<p class="text-xs text-slate-400 text-center">Belum ada mahasiswa yang mengerjakan.</p>`;
+          return;
+        }
+
+        container.innerHTML = Object.values(data).map((s) => `
+          <div class="bg-slate-900 border ${s.violationCount > 0 ? 'border-rose-500' : 'border-slate-700'} p-4 rounded-xl space-y-3">
+            <div class="flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
+              <div class="flex items-center gap-3">
+                ${s.photo ? `<img src="${s.photo}" class="w-10 h-10 object-cover rounded-full border border-cyan-400">` : ''}
+                <div>
+                  <h4 class="font-bold text-sm text-cyan-300">${s.name} (${s.nim})</h4>
+                  <p class="text-xs text-slate-400">${s.prodi} • Status: <span class="text-emerald-400 font-semibold">${s.status}</span></p>
+                </div>
+              </div>
+              <span class="px-2.5 py-1 text-xs rounded-full font-bold ${s.violationCount > 0 ? 'bg-rose-900 text-rose-300' : 'bg-emerald-900 text-emerald-300'}">
+                ${s.violationCount || 0} Pelanggaran
+              </span>
+            </div>
+
+            ${s.violations && s.violations.length > 0 ? `
+              <div class="bg-rose-950/40 p-3 rounded-lg border border-rose-900 text-xs text-rose-300">
+                <p class="font-bold mb-1">Detail Pelanggaran:</p>
+                <ul class="list-disc list-inside space-y-0.5">
+                  ${s.violations.map(v => `<li>${v}</li>`).join('')}
+                </ul>
+              </div>
+            ` : ''}
+
+            ${s.answers ? `
+              <details class="text-xs">
+                <summary class="cursor-pointer text-cyan-400 font-semibold">Lihat 10 Jawaban</summary>
+                <div class="mt-2 space-y-2 pl-2 border-l border-slate-700">
+                  ${s.answers.map((a, i) => `
+                    <div class="bg-slate-950 p-2 rounded">
+                      <p class="font-bold text-slate-300">${i + 1}. ${a.soal}</p>
+                      <p class="text-slate-400 mt-1">${a.jawaban || '-'}</p>
+                    </div>
+                  `).join('')}
+                </div>
+              </details>
+            ` : ''}
+          </div>
+        `).join('');
+      });
+    }
+  </script>
+</body>
+</html>
